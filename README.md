@@ -103,13 +103,13 @@ Use:
 ## Grafana: Add Windows Dashboard
 
 1. Go to Grafana > Dashboards > New> Import
-2. Use Dashboard ID like `10467, 11074 or others` (Windows Node Dashboard)
+2. Use Dashboard ID like `10467, 11074 or others` (Windows Node Dashboard). You can as well use the json-model.json file to create for you the dashboard in grafana.
 3. Select `Prometheus` as the data source
 4. Import and tweak the dashboard the way you like.
 
 ---
 
--------------------------------Happy monitoring ;)-------------------------------------------
+-----------------------------------Happy monitoring ;)-----------------------------------------
 
 
 
