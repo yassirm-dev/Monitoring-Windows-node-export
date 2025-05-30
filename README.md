@@ -1,256 +1,135 @@
-# Tekton Pipelines CLI (`tkn`)
 
-[![Go Report Card](https://goreportcard.com/badge/tektoncd/cli)](https://goreportcard.com/report/tektoncd/cli)
-[![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/6510/badge)](https://bestpractices.coreinfrastructure.org/projects/6510)
+# Monitoring Stack on Minikube with Windows Exporter
 
-<p align="center">
-<img width="250" height="175" src="https://github.com/cdfoundation/artwork/blob/main/tekton/additional-artwork/tekton-cli/color/tektoncli_color.svg" alt="Tekton logo"></img>
-</p>
+This project deploys a full monitoring stack (Prometheus, Grafana, Alertmanager) using the [`prometheus-community/kube-prometheus-stack`](https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack) Helm chart in a **Minikube** environment. It also integrates **Windows Exporter** to monitor metrics from an external Windows machine. Same implementation can be used for other infrastrastructure such as Databases,Windows server, Ubuntu server, etc using node exporters.
 
-The _Tekton Pipelines CLI_ project provides a command-line interface (CLI) for interacting with [Tekton](https://tekton.dev/), an open-source framework for Continuous Integration and Delivery (CI/CD) systems.
+## Features
 
-## Installing `tkn`
+- Prometheus monitoring for Kubernetes and external nodes
+- Grafana dashboards
+- Ingress exposure via `prometheus.example.com` and `grafana.example.com`
+- Windows Exporter for remote Windows metrics
 
-Download the latest binary executable for your operating system.
+---
 
-### Mac OS X
+## Prerequisites
 
-- Use [Homebrew](https://brew.sh)
+Ensure the following are installed:
 
-```shell
-  brew install tektoncd-cli
-```
+- [Minikube](https://minikube.sigs.k8s.io/docs/start/)
+- [kubectl](https://kubernetes.io/docs/tasks/tools/)
+- [Helm](https://helm.sh/docs/intro/install/)
+- An external Windows machine with [Windows Exporter](https://github.com/prometheus-community/windows_exporter) installed and running
 
-- Use [released tarball](https://github.com/tektoncd/cli/releases/download/v0.30.1/tkn_0.30.1_Darwin_all.tar.gz)
+---
 
-  ```shell
-  # Get the tar.xz
-  curl -LO https://github.com/tektoncd/cli/releases/download/v0.30.1/tkn_0.30.1_Darwin_all.tar.gz
-  # Extract tkn to your PATH (e.g. /usr/local/bin)
-  sudo tar xvzf tkn_0.30.1_Darwin_all.tar.gz -C /usr/local/bin tkn
-  ```
+## Deployment Steps
 
-### Windows
 
-- Use [Chocolatey](https://chocolatey.org/packages/tektoncd-cli)
-
-```shell
-choco install tektoncd-cli --confirm
-```
-
-- Use [Scoop](https://scoop.sh)
-```powershell
-scoop install tektoncd-cli
-```
-
-- Use [Powershell](https://docs.microsoft.com/en-us/powershell) [released zip](https://github.com/tektoncd/cli/releases/download/v0.30.1/tkn_0.30.1_Windows_x86_64.zip)
-
-```powershell
-#Create directory
-New-Item -Path "$HOME/tektoncd/cli" -Type Directory
-# Download file
-Start-BitsTransfer -Source https://github.com/tektoncd/cli/releases/download/v0.30.1/tkn_0.30.1_Windows_x86_64.zip -Destination "$HOME/tektoncd/cli/."
-# Uncompress zip file
-Expand-Archive $HOME/tektoncd/cli/*.zip -DestinationPath C:\Users\Developer\tektoncd\cli\.
-#Add to Windows `Environment Variables`
-[Environment]::SetEnvironmentVariable("Path",$($env:Path + ";$Home\tektoncd\cli"),'User')
-```
-
-### Linux tarballs
-
-* [Linux AMD 64](https://github.com/tektoncd/cli/releases/download/v0.30.1/tkn_0.30.1_Linux_x86_64.tar.gz)
-
-  ```shell
-  # Get the tar.xz
-  curl -LO https://github.com/tektoncd/cli/releases/download/v0.30.1/tkn_0.30.1_Linux_x86_64.tar.gz
-  # Extract tkn to your PATH (e.g. /usr/local/bin)
-  sudo tar xvzf tkn_0.30.1_Linux_x86_64.tar.gz -C /usr/local/bin/ tkn
-  ```
-
-* [Linux AARCH 64](https://github.com/tektoncd/cli/releases/download/v0.30.1/tkn_0.30.1_Linux_aarch64.tar.gz)
-
-  ```shell
-  # Get the tar.xz
-  curl -LO https://github.com/tektoncd/cli/releases/download/v0.30.1/tkn_0.30.1_Linux_aarch64.tar.gz
-  # Extract tkn to your PATH (e.g. /usr/local/bin)
-  sudo tar xvzf tkn_0.30.1_Linux_aarch64.tar.gz -C /usr/local/bin/ tkn
-  ```
-
-* [Linux IBM Z](https://github.com/tektoncd/cli/releases/download/v0.30.1/tkn_0.30.1_Linux_s390x.tar.gz)
-
-  ```shell
-  # Get the tar.gz
-  curl -LO https://github.com/tektoncd/cli/releases/download/v0.30.1/tkn_0.30.1_Linux_s390x.tar.gz
-  # Extract tkn to your PATH (e.g. /usr/local/bin)
-  sudo tar xvzf tkn_0.30.1_Linux_s390x.tar.gz -C /usr/local/bin/ tkn
-  ```
-
-* [Linux IBM P](https://github.com/tektoncd/cli/releases/download/v0.30.1/tkn_0.30.1_Linux_ppc64le.tar.gz)
-
-  ```shell
-  # Get the tar.gz
-  curl -LO https://github.com/tektoncd/cli/releases/download/v0.30.1/tkn_0.30.1_Linux_ppc64le.tar.gz
-  # Extract tkn to your PATH (e.g. /usr/local/bin)
-  sudo tar xvzf tkn_0.30.1_Linux_ppc64le.tar.gz -C /usr/local/bin/ tkn
-  ```
-
-### Linux RPMs
-
-  If you are running on any of the following rpm based distros:
-
-  * Latest Fedora and the two versions behind.
-  * Centos Stream
-  * EPEL
-  * Latest RHEL
-
-  you would be able to use [@chmouel](https://github.com/chmouel)'s unofficial copr package
-  repository by running the following commands:
-
-  ```shell
-  dnf copr enable chmouel/tektoncd-cli
-  dnf install tektoncd-cli
-  ```
-
-  * [Binary RPM package](https://github.com/tektoncd/cli/releases/download/v0.30.1/tektoncd-cli-0.30.1_Linux-64bit.rpm)
-
-  On any other RPM based distros, you can install the rpm directly:
-
-   ```shell
-    rpm -Uvh https://github.com/tektoncd/cli/releases/download/v0.30.1/tektoncd-cli-0.30.1_Linux-64bit.rpm
-   ```
-
-### Linux Debs
-
-  * [Ubuntu PPA](https://launchpad.net/~tektoncd/+archive/ubuntu/cli/+packages)
-
-  If you are running on the latest rolling Ubuntu or Debian, you can use the TektonCD CLI PPA:
-
-  ```shell
-  sudo apt update;sudo apt install -y gnupg
-  sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 3EFE0E0A2F2F60AA
-  echo "deb http://ppa.launchpad.net/tektoncd/cli/ubuntu jammy main"|sudo tee /etc/apt/sources.list.d/tektoncd-ubuntu-cli.list
-  sudo apt update && sudo apt install -y tektoncd-cli
-  ```
-
-  The PPA may work with older releases, but that hasn't been tested.
-
-  * [Binary DEB package](https://github.com/tektoncd/cli/releases/download/v0.30.1/tektoncd-cli-0.30.1_Linux-64bit.deb)
-
-  On any other Debian or Ubuntu based distro, you can simply install the binary package directly with `dpkg`:
-
-  ```shell
-  curl -LO https://github.com/tektoncd/cli/releases/download/v0.30.1/tektoncd-cli-0.30.1_Linux-64bit.deb
-  dpkg -i tektoncd-cli-0.30.1_Linux-64bit.deb
-  ```
-
-### NixOS/Nix
-
-You can install `tektoncd-cli` from [nixpkgs](https://github.com/NixOS/nixpkgs) on any system that supports the `nix` package manager.
-
-```shell
-nix-env --install tektoncd-cli
-```
-### Arch / Manjaro
-
-You can install [`tektoncd-cli`](https://archlinux.org/packages/community/x86_64/tekton-cli/) from the official arch package repository :
-
-```shell
-pacman -S tektoncd-cli
-```
-
-### Homebrew on Linux
-
-You can install the latest tektoncd-cli if you are using [Homebrew on Linux](https://docs.brew.sh/Homebrew-on-Linux) as for the osx version you need to simply do :
-
-```shell
-brew install tektoncd-cli
-```
-
-### Source install
-
-  If you have [go](https://golang.org/) installed and you want to compile the CLI from source, you can checkout the [Git repository](https://github.com/tektoncd/cli) and run the following commands:
-
-  ```shell
-  make bin/tkn
-  ```
-
-  This will output the `tkn` binary in `bin/tkn`
-
-### `tkn` as a `kubectl` plugin
-
-`kubectl` will find any binary named `kubectl-*` on your PATH and consider it as a plugin.
-After installing tkn, create a link as kubectl-tkn
-  ```shell
-ln -s /usr/local/bin/tkn /usr/local/bin/kubectl-tkn
-  ```
-Run the following to confirm tkn is available as a plugin:
-  ```shell
-kubectl plugin list
-  ```
-You should see the following after running kubectl plugin list if tkn is available as a plugin:
-  ```shell
-/usr/local/bin/kubectl-tkn
-```
-If the output above is shown, run kubectl-tkn to see the list of available tkn commands to run.
-
-## Useful Commands
-
-The following commands help you understand and effectively use the Tekton CLI:
-
- * `tkn help:` Displays a list of the commands with helpful information.
- * [`tkn bundle:`](docs/cmd/tkn_bundle.md) Manage Tekton [bundles](https://github.com/tektoncd/pipeline/blob/main/docs/tekton-bundle-contracts.md)
- * [`tkn clustertask:`](docs/cmd/tkn_clustertask.md) Parent command of the ClusterTask command group.
- * [`tkn clustertriggerbinding:`](docs/cmd/tkn_clustertriggerbinding.md) Parent command of the ClusterTriggerBinding command group.
- * [`tkn completion:`](docs/cmd/tkn_completion.md) Outputs a BASH, ZSH, Fish or PowerShell completion script for `tkn` to allow command completion with Tab.
- * [`tkn eventlistener:`](docs/cmd/tkn_eventlistener.md) Parent command of the Eventlistener command group.
- * [`tkn hub:`](docs/cmd/tkn_hub.md) Search and install Tekton Resources from [Hub](https://hub.tekton.dev)
- * [`tkn pipeline:`](docs/cmd/tkn_pipeline.md) Parent command of the Pipeline command group.
- * [`tkn pipelinerun:`](docs/cmd/tkn_pipelinerun.md) Parent command of the Pipelinerun command group.
- * [`tkn task:`](docs/cmd/tkn_task.md) Parent command of the Task command group.
- * [`tkn taskrun:`](docs/cmd/tkn_taskrun.md) Parent command of the Taskrun command group.
- * [`tkn triggerbinding:`](docs/cmd/tkn_triggerbinding.md) Parent command of the Triggerbinding command group.
- * [`tkn triggertemplate:`](docs/cmd/tkn_triggertemplate.md) Parent command of the Triggertemplate command group.
- * [`tkn version:`](docs/cmd/tkn_version.md) Outputs the cli version.
-
-For every `tkn` command, you can use `-h` or `--help` flags to display specific help for that command.
-
-## Disable Color and Emojis in Output
-
-For many `tkn` commands, color and emojis by default will appear in command
-output.
-
-It will only shows if you are in interactive shell with a [standard
-input](https://en.wikipedia.org/wiki/Standard_streams#Standard_input_(stdin))
-attached. If you pipe the tkn command or run it in a non interactive way (ie:
-from tekton itself in a Task) the coloring and emojis will *always* be disabled.
-
-`tkn` offers two approaches for disabling color and emojis from command output.
-
-To remove the color and emojis from all `tkn` command output, set the environment variable `NO_COLOR`, such as shown below:
-
-```shell
-export NO_COLOR=""
-```
-
-More information on `NO_COLOR` can be found in the [`NO_COLOR` documentation](https://no-color.org/).
-
-To remove color and emojis from the output of a single command execution, the `--no-color` option can be used with any command,
-such as in the example below:
+### 1. Start Minikube
 
 ```bash
-tkn taskrun describe --no-color
+minikube start --driver=docker
 ```
 
+> Make sure Minikube ingress addon is enabled:
 
-## Want to contribute
+```bash
+minikube addons enable ingress
+```
 
-We are so excited to have you!
+---
 
-- See [CONTRIBUTING.md](CONTRIBUTING.md) for an overview of our processes
-- See [DEVELOPMENT.md](DEVELOPMENT.md) for how to get started
-- See [ROADMAP.md](ROADMAP.md) for the current roadmap
-- See [releases.md][releases.md] for our release cadence and processes
-- Look at our
-  [good first issues](https://github.com/tektoncd/cli/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
-  and our
-  [help wanted issues](https://github.com/tektoncd/cli/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22)
+### 2. Add Prometheus Helm Repository
+
+```bash
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+```
+
+---
+
+### 3. Create Monitoring Namespace
+
+```bash
+kubectl create namespace monitoring
+```
+
+---
+
+### 4. Create Custom `values.yaml`(Already in the Repo)
+
+- Enable Ingress
+- Add `windows_exporter` as a target as directed in the values.yaml file
+
+
+> Replace `<WINDOWS_IP>` with the actual IP address of your Windows machine.
+
+---
+
+### 5. Install the Monitoring Stack
+
+```bash
+helm install monitoring prometheus-community/kube-prometheus-stack   -n monitoring -f values.yaml
+```
+
+---
+
+### 6. Update `/etc/hosts` for Local Testing
+
+Add DNS to the lines to your `/etc/hosts` file:
+
+```plaintext
+<minikube_ip/cluster_ip> prometheus.monitoring.com grafana.monitoring.com
+```
+
+---
+
+### 7. Access the Dashboards
+
+- **Prometheus**: (http://prometheus.monitoring.com)
+- **Grafana**: (http://grafana.monitoring.com)
+
+Use:
+- **Username**: `admin`
+- **Password**: `Prom-operator`
+
+---
+
+## Verify Windows Exporter
+1. Prometheus, access all targets through http://prometheus.monitoring.com/targets
+2. You should see your Windows machine as a target in Prometheus with name: windows-exporter as described in the values.yaml as a job_name.
+
+## Grafana: Add Windows Dashboard
+
+1. Go to Grafana > Dashboards > New> Import
+2. Use Dashboard ID like `10467, 11074 or others` (Windows Node Dashboard)
+3. Select `Prometheus` as the data source
+4. Import and tweak the dashboard the way you like.
+
+---
+
+-------------------------------Happy monitoring ;)-------------------------------------------
+
+
+
+## Uninstall
+
+```bash
+helm uninstall monitoring -n monitoring
+kubectl delete namespace monitoring
+```
+
+---
+
+## References
+
+- [kube-prometheus-stack Helm Chart](https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack)
+- [Windows Exporter](https://github.com/prometheus-community/windows_exporter)
+- [Minikube Ingress Guide](https://minikube.sigs.k8s.io/docs/handbook/ingress/)
+
+---
+
+## Author
+
+Yassir Ndegwa Mohammed
